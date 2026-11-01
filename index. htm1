@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jobcenter">
+<meta name="theme-color" content="#0f766e">
+<title>منظّم Jobcenter</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,system-ui,sans-serif;background:#f1f5f9;color:#0f172a;padding-bottom:80px}
+header{background:#0f766e;color:#fff;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:17px;margin:0;font-weight:600}
+main{padding:12px;max-width:640px;margin:0 auto}
+.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h3{margin:0 0 6px;font-size:16px}
+.muted{color:#64748b;font-size:13px}
+input,select,textarea,button{font-family:inherit;font-size:16px}
+input,select,textarea{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;margin:5px 0 12px;background:#fff}
+textarea{min-height:70px}
+label{font-size:13px;font-weight:600;color:#334155}
+button{background:#0f766e;color:#fff;border:0;border-radius:10px;padding:13px;width:100%;font-weight:600;margin-top:4px}
+button.sec{background:#e2e8f0;color:#0f172a}
+button.danger{background:#dc2626}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav button{flex:1;background:none;color:#64748b;font-size:11px;padding:9px 2px;border-radius:0;margin:0;font-weight:500}
+nav button.on{color:#0f766e}
+nav button span{display:block;font-size:20px;line-height:1.2}
+.badge{display:inline-block;background:#fee2e2;color:#b91c1c;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:600}
+.badge.ok{background:#dcfce7;color:#15803d}
+.badge.soon{background:#fef3c7;color:#b45309}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.thumbs{display:flex;gap:6px;overflow-x:auto;margin-top:8px}
+.thumbs img{height:90px;border-radius:8px;border:1px solid #e2e8f0}
+#lock{position:fixed;inset:0;background:#0f766e;z-index:100;display:flex;flex-direction:column;justify-content:center;padding:30px;color:#fff}
+#lock input{text-align:center;font-size:28px;letter-spacing:8px;background:rgba(255,255,255,.15);border:0;color:#fff}
+#lock button{background:#fff;color:#0f766e}
+.hide{display:none!important}
+.empty{text-align:center;color:#94a3b8;padding:30px 0;font-size:14px}
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <h2 style="text-align:center;margin-bottom:20px">منظّم Jobcenter</h2>
+  <p style="text-align:center;font-size:14px;opacity:.8" id="lockMsg">أدخل الرمز</p>
+  <input id="pinIn" type="password" inputmode="numeric" placeholder="••••">
+  <button onclick="tryUnlock()">دخول</button>
+</div>
+
+<header>
+  <h1 id="hTitle">الرئيسية</h1>
+  <span style="font-size:12px;opacity:.85">🔒 محلي</span>
+</header>
+
+<main>
+  <!-- Dashboard -->
+  <section id="v-home">
+    <div class="card" id="dashDl"></div>
+    <div class="card">
+      <h3>آخر المستندات</h3>
+      <div id="dashDocs"></div>
+    </div>
+    <button class="sec" onclick="go('add')">➕ إضافة مستند</button>
+  </section>
+
+  <!-- Documents -->
+  <section id="v-docs" class="hide">
+    <input id="q" placeholder="🔍 بحث بالعنوان أو الملاحظات..." oninput="renderDocs()">
+    <div id="docList"></div>
+  </section>
+
+  <!-- Add -->
+  <section id="v-add" class="hide">
+    <div class="card">
+      <label>العنوان</label>
+      <input id="a_title" placeholder="مثال: Bescheid عن الإيجار">
+      <label>النوع</label>
+      <select id="a_type">
+        <option>Bescheid</option><option>Antrag</option>
+        <option>Weiterbewilligungsantrag (WBA)</option><option>Widerspruch</option>
+        <option>Mitwirkungsaufforderung</option><option>Einladung / Termin</option>
+        <option>Veränderungsmitteilung</option><option>Nachweis</option>
+        <option>مراسلة صادرة</option><option>أخرى</option>
+      </select>
+      <label>تاريخ المستند</label>
+      <input id="a_date" type="date">
+      <label>ملاحظات</label>
+      <textarea id="a_notes" placeholder="رقم Kundennummer، ملاحظات..."></textarea>
+      <label>صور / PDF</label>
+      <input id="a_files" type="file" accept="image/*,application/pdf" multiple onchange="pickFiles(this)">
+      <div class="thumbs" id="a_thumbs"></div>
+      <button onclick="saveDoc()">حفظ المستند</button>
+      <button class="sec" onclick="go('home')">إلغاء</button>
+    </div>
+  </section>
+
+  <!-- Deadlines -->
+  <section id="v-dls" class="hide">
+    <div class="card">
+      <h3>إضافة موعد نهائي</h3>
+      <label>العنوان</label>
+      <input id="d_title" placeholder="مثال: إرسال Widerspruch">
+      <label>التاريخ</label>
+      <input id="d_date" type="date">
+      <label>ملاحظات</label>
+      <input id="d_notes" placeholder="اختياري">
+      <button onclick="saveDl()">إضافة</button>
+    </div>
+    <div id="dlList"></div>
+  </section>
+
+  <!-- Settings -->
+  <section id="v-set" class="hide">
+    <div class="card">
+      <h3>نسخة احتياطية</h3>
+      <p class="muted">احفظ ملف على آيفونك أو iCloud. سواه كل أسبوع.</p>
+      <button onclick="backup()">📤 تصدير نسخة</button>
+      <label style="margin-top:14px;display:block">استعادة من ملف</label>
+      <input type="file" accept=".json" onchange="restore(this)">
+    </div>
+    <div class="card">
+      <h3>الأمان</h3>
+      <button class="sec" onclick="changePin()">تغيير الرمز</button>
+      <button class="danger" onclick="wipe()">حذف كل البيانات</button>
+    </div>
+    <div class="card">
+      <h3>معلومات</h3>
+      <p class="muted">كل البيانات على جهازك فقط. لا إنترنت، لا سحابة. البرنامج أداة تنظيم وليس استشارة قانونية — تحقق دائماً من المدد (Fristen) بنفسك.</p>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button id="n-home" class="on" onclick="go('home')"><span>🏠</span>الرئيسية</button>
+  <button id="n-docs" onclick="go('docs')"><span>📄</span>مستندات</button>
+  <button id="n-dls" onclick="go('dls')"><span>⏰</span>مواعيد</button>
+  <button id="n-set" onclick="go('set')"><span>⚙️</span>إعدادات</button>
+</nav>
+
+<script>
+/* ============ IndexedDB ============ */
+const DB='jc_db';
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,1);
+ r.onupgradeneeded=e=>{const d=e.target.result;
+  if(!d.objectStoreNames.contains('docs'))d.createObjectStore('docs',{keyPath:'id'});
+  if(!d.objectStoreNames.contains('dls'))d.createObjectStore('dls',{keyPath:'id'});};
+ r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function all(s){const d=await idb();return new Promise((res,rej)=>{
+ const q=d.transaction(s).objectStore(s).getAll();q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
+async function put(s,v){const d=await idb();return new Promise((res,rej)=>{
+ const t=d.transaction(s,'readwrite');t.objectStore(s).put(v);
+ t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});}
+async function del(s,k){const d=await idb();return new Promise((res,rej)=>{
+ const t=d.transaction(s,'readwrite');t.objectStore(s).delete(k);
+ t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});}
+async function clearAll(){const d=await idb();return new Promise((res,rej)=>{
+ const t=d.transaction(['docs','dls'],'readwrite');t.objectStore('docs').clear();t.objectStore('dls').clear();
+ t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});}
+
+/* ============ PIN ============ */
+async function sha(s){const b=new TextEncoder().encode(s);const h=await crypto.subtle.digest('SHA-256',b);
+ return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+let locked=true;
+async function tryUnlock(){
+  const v=document.getElementById('pinIn').value;
+  const saved=localStorage.getItem('jc_pin');
+  if(!saved){
+    if(v.length<4){document.getElementById('lockMsg').textContent='٤ أرقام على الأقل';return;}
+    localStorage.setItem('jc_pin',await sha(v));unlockNow();
+  }else{
+    if(await sha(v)===saved)unlockNow();
+    else{document.getElementById('lockMsg').textContent='رمز خاطئ';document.getElementById('pinIn').value='';}
+  }
+}
+function unlockNow(){locked=false;document.getElementById('lock').classList.add('hide');
+ document.getElementById('pinIn').value='';init();}
+function lockNow(){locked=true;document.getElementById('lock').classList.remove('hide');
+ document.getElementById('lockMsg').textContent='أدخل الرمز';}
+async function changePin(){const p=prompt('الرمز الجديد (٤ أرقام على الأقل):');
+ if(p&&p.length>=4){localStorage.setItem('jc_pin',await sha(p));alert('تم التغيير');}}
+
+/* ============ Helpers ============ */
+function go(v){['home','docs','add','dls','set'].forEach(x=>{
+  document.getElementById('v-'+x).classList.toggle('hide',x!==v);
+  const n=document.getElementById('n-'+x);if(n)n.classList.toggle('on',x===v);});
+ document.getElementById('hTitle').textContent={home:'الرئيسية',docs:'المستندات',add:'مستند جديد',dls:'المواعيد النهائية',set:'الإعدادات'}[v];
+ if(v==='home')renderHome();if(v==='docs')renderDocs();if(v==='dls')renderDls();window.scrollTo(0,0);}
+function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function daysLeft(d){const t=new Date();t.setHours(0,0,0,0);
+ const x=new Date(d+'T00:00:00');return Math.round((x-t)/86400000);}
+
+/* ============ Images ============ */
+let pending=[];
+function pickFiles(inp){
+  pending=[];
+  [...inp.files].forEach(f=>{
+    if(f.type==='application/pdf'){const r=new FileReader();
+      r.onload=()=>{pending.push(r.result);showThumbs();};r.readAsDataURL(f);}
+    else{const img=new Image();const u=URL.createObjectURL(f);
+      img.onload=()=>{let w=img.width,h=img.height;const m=1400/Math.max(w,h);
+        if(m<1){w=Math.round(w*m);h=Math.round(h*m);}
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(u);
+        pending.push(c.toDataURL('image/jpeg',.75));showThumbs();};
+      img.src=u;}
+  });
+}
+function showThumbs(){document.getElementById('a_thumbs').innerHTML=
+  pending.map((d,i)=>d.startsWith('data:image')?`<img src="${d}">`:`<div class="badge">PDF ${i+1}</div>`).join('');}
+
+/* ============ Documents ============ */
+async function saveDoc(){
+  const title=document.getElementById('a_title').value.trim();
+  if(!title){alert('اكتب عنوان');return;}
+  await put('docs',{id:Date.now()+''+Math.random().toString(36).slice(2,6),
+    title,type:document.getElementById('a_type').value,
+    date:document.getElementById('a_date').value,
+    notes:document.getElementById('a_notes').value,
+    files:pending,created:Date.now()});
+  ['a_title','a_date','a_notes'].forEach(i=>document.getElementById(i).value='');
+  pending=[];showThumbs();go('docs');
+}
+async function renderDocs(){
+  const q=(document.getElementById('q').value||'').toLowerCase();
+  let docs=await all('docs');
+  docs.sort((a,b)=>b.created-a.created);
+  if(q)docs=docs.filter(d=>(d.title+' '+d.notes+' '+d.type).toLowerCase().includes(q));
+  document.getElementById('docList').innerHTML=docs.length?docs.map(d=>`
+    <div class="card">
+      <h3>${esc(d.title)}</h3>
+      <div class="muted">${esc(d.type)} • ${d.date||'بدون تاريخ'}</div>
+      ${d.notes?`<div class="muted" style="margin-top:6px">${esc(d.notes)}</div>`:''}
+      <div class="thumbs">${(d.files||[]).map(f=>f.startsWith('data:image')?`<img src="${f}">`:`<div class="badge">PDF</div>`).join('')}</div>
+      <button class="danger" style="margin-top:10px" onclick="delDoc('${d.id}')">حذف</button>
+    </div>`).join(''):'<div class="empty">لا مستندات بعد</div>';
+}
+async function delDoc(id){if(!confirm('حذف المستند؟'))return;await del('docs',id);renderDocs();}
+
+/* ============ Deadlines ============ */
+async function saveDl(){
+  const t=document.getElementById('d_title').value.trim();
+  const d=document.getElementById('d_date').value;
+  if(!t||!d){alert('اكتب العنوان والتاريخ');return;}
+  await put('dls',{id:Date.now()+''+Math.random().toString(36).slice(2,6),
+    title:t,due:d,notes:document.getElementById('d_notes').value,done:false,created:Date.now()});
+  ['d_title','d_date','d_notes'].forEach(i=>document.getElementById(i).value='');
+  renderDls();
+}
+function dlCard(x){
+  const n=daysLeft(x.due);
+  const b=x.done?'<span class="badge ok">منجز</span>':
+    n<0?`<span class="badge">متأخر ${-n} يوم</span>`:
+    n<=3?`<span class="badge soon">بعد ${n} يوم</span>`:
+    `<span class="badge ok">بعد ${n} يوم</span>`;
+  return `<div class="card"><h3>${esc(x.title)}</h3>
+    <div class="muted">${x.due} ${b}</div>
+    ${x.notes?`<div class="muted">${esc(x.notes)}</div>`:''}
+    <div class="row" style="margin-top:10px">
+      <button class="sec" onclick="toggleDl('${x.id}')">${x.done?'إرجاع':'تم ✓'}</button>
+      <button class="danger" onclick="delDl('${x.id}')">حذف</button>
+    </div></div>`;
+}
+async function renderDls(){
+  const l=(await all('dls')).sort((a,b)=>a.due.localeCompare(b.due));
+  document.getElementById('dlList').innerHTML=l.length?l.map(dlCard).join(''):'<div class="empty">لا مواعيد</div>';
+}
+async function toggleDl(id){const l=await all('dls');const x=l.find(v=>v.id===id);
+ x.done=!x.done;await put('dls',x);renderDls();}
+async function delDl(id){if(!confirm('حذف؟'))return;await del('dls',id);renderDls();}
+
+/* ============ Home ============ */
+async function renderHome(){
+  const dls=(await all('dls')).filter(x=>!x.done).sort((a,b)=>a.due.localeCompare(b.due));
+  document.getElementById('dashDl').innerHTML='<h3>المواعيد القادمة</h3>'+
+    (dls.length?dls.slice(0,4).map(x=>{
+      const n=daysLeft(x.due);
+      const b=n<0?`<span class="badge">متأخر</span>`:
+        n<=3?`<span class="badge soon">${n} يوم</span>`:`<span class="badge ok">${n} يوم</span>`;
+      return `<div style="padding:7px 0;border-bottom:1px solid #f1f5f9">${esc(x.title)} ${b}
+        <div class="muted">${x.due}</div></div>`;}).join(''):'<div class="empty">لا مواعيد</div>');
+  const docs=(await all('docs')).sort((a,b)=>b.created-a.created).slice(0,3);
+  document.getElementById('dashDocs').innerHTML=docs.length?docs.map(d=>
+    `<div style="padding:7px 0;border-bottom:1px solid #f1f5f9">${esc(d.title)}
+     <div class="muted">${esc(d.type)}</div></div>`).join(''):'<div class="empty">لا مستندات</div>';
+}
+
+/* ============ Backup ============ */
+async function backup(){
+  const data={v:1,date:new Date().toISOString(),docs:await all('docs'),dls:await all('dls')};
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='jobcenter-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+}
+function restore(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!confirm('سيتم استبدال كل البيانات الحالية. متابعة؟'))return;
+      await clearAll();
+      for(const x of d.docs||[])await put('docs',x);
+      for(const x of d.dls||[])await put('dls',x);
+      alert('تمت الاستعادة ✓');renderHome();
+    }catch(e){alert('ملف غير صالح');}
+  };r.readAsText(f);
+}
+async function wipe(){
+  if(!confirm('حذف كل البيانات نهائياً؟'))return;
+  if(!confirm('متأكد؟ لا رجعة!'))return;
+  await clearAll();alert('تم الحذف');renderHome();
+}
+
+/* ============ Init ============ */
+let started=false;
+async function init(){
+  if(started)return;started=true;
+  if(!localStorage.getItem('jc_pin'))document.getElementById('lockMsg').textContent='اختر رمزاً جديداً (٤ أرقام+)';
+  renderHome();
+}
+document.getElementById('pinIn').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
+setTimeout(()=>document.getElementById('pinIn').focus(),300);
+</script>
+</body>
+</html>
